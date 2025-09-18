@@ -1,0 +1,72 @@
+const express = require("express");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
+
+const app = express();
+app.use(bodyParser.json());
+
+mongoose
+    .connect(process.env.MONGODB_URI || "mongodb://localhost/contactsDB", {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    })
+    .then(() => console.log("MongoDB connected"))
+    .catch((err) => console.log(err));
+
+const Contact = mongoose.model(
+    "Contact",
+    new mongoose.Schema({
+        name: { type: String, required: true },
+        phone: { type: String, required: true },
+    })
+);
+
+app.get("/api/contacts", async (req, res) => {
+    const contacts = await Contact.find();
+    res.send(contacts);
+});
+
+app.get("/api/contacts/:id", async (req, res) => {
+    const contact = await Contact.findById(req.params.id);
+    res.send(contact);
+});
+
+app.post("/api/contacts", async (req, res) => {
+    const contact = new Contact({
+        name: req.body.name,
+        phone: req.body.phone,
+    });
+    await contact.save();
+    res.send(contact);
+});
+
+app.put("/api/contacts/:id", async (req, res) => {
+    const contact = await Contact.findByIdAndUpdate(
+        req.params.id,
+        {
+            name: req.body.name,
+            phone: req.body.phone,
+        },
+        { new: true }
+    );
+    res.send(contact);
+});
+
+app.patch("/api/contacts/:id", async (req, res) => {
+    const contact = await Contact.findByIdAndUpdate(
+        req.params.id,
+        {
+            $set: req.body,
+        },
+        { new: true }
+    );
+    res.send(contact);
+});
+
+app.delete("/api/contacts/:id", async (req, res) => {
+    const contact = await Contact.findByIdAndDelete(req.params.id);
+    res.send(contact);
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
