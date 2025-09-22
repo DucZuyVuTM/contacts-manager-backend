@@ -1,29 +1,37 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
-const cors = require("cors");
 
 const app = express();
 
 // env
-const ORIGIN = process.env.ORIGIN || 'http://localhost:5173';
+const API_SECRET = process.env.API_SECRET || 'default-secret';
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/contactsDB";
 const PORT = process.env.PORT || 5000;
 // ---
 
-app.use(cors({
-    origin: ORIGIN,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type'],
-}));
-
 app.use(bodyParser.json());
 
+const validateApiKey = (req, res, next) => {
+    const clientSecret = req.headers['x-api-secret'] || req.headers['authorization'];
+    
+    if (!clientSecret) {
+        return res.status(401).send({ error: 'API secret required' });
+    }
+    
+    const secret = clientSecret.replace('Bearer ', '');
+    
+    if (secret !== API_SECRET) {
+        return res.status(403).send({ error: 'Invalid API secret' });
+    }
+    
+    next();
+};
+
+app.use('/api/contacts', validateApiKey);
+
 mongoose
-    .connect(MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-    })
+    .connect(MONGODB_URI)
     .then(() => console.log("MongoDB connected"))
     .catch((err) => console.log(err));
 
