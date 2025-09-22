@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const cors = require("cors");
 
 const app = express();
 
@@ -9,6 +10,12 @@ const API_SECRET = process.env.API_SECRET || 'default-secret';
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/contactsDB";
 const PORT = process.env.PORT || 5000;
 // ---
+
+app.use(cors({
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'x-api-secret']
+}));
+
 
 app.use(bodyParser.json());
 
