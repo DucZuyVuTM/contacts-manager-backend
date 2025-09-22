@@ -5,8 +5,14 @@ const cors = require("cors");
 
 const app = express();
 
+// env
+const ORIGIN = process.env.ORIGIN || 'http://localhost:5173';
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/contactsDB";
+const PORT = process.env.PORT || 5000;
+// ---
+
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: ORIGIN,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type'],
 }));
@@ -14,7 +20,7 @@ app.use(cors({
 app.use(bodyParser.json());
 
 mongoose
-    .connect(process.env.MONGODB_URI || "mongodb://localhost/contactsDB", {
+    .connect(MONGODB_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
     })
@@ -80,5 +86,4 @@ app.delete("/api/contacts/:id", async (req, res) => {
     res.send(contact);
 });
 
-const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
