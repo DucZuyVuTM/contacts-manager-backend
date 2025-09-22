@@ -1,8 +1,16 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
+const cors = require("cors");
 
 const app = express();
+
+app.use(cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type'],
+}));
+
 app.use(bodyParser.json());
 
 mongoose
@@ -28,6 +36,7 @@ app.get("/api/contacts", async (req, res) => {
 
 app.get("/api/contacts/:id", async (req, res) => {
     const contact = await Contact.findById(req.params.id);
+    if (!contact) return res.status(404).send("Contact not found");
     res.send(contact);
 });
 
@@ -49,6 +58,7 @@ app.put("/api/contacts/:id", async (req, res) => {
         },
         { new: true }
     );
+    if (!contact) return res.status(404).send("Contact not found");
     res.send(contact);
 });
 
@@ -60,11 +70,13 @@ app.patch("/api/contacts/:id", async (req, res) => {
         },
         { new: true }
     );
+    if (!contact) return res.status(404).send("Contact not found");
     res.send(contact);
 });
 
 app.delete("/api/contacts/:id", async (req, res) => {
     const contact = await Contact.findByIdAndDelete(req.params.id);
+    if (!contact) return res.status(404).send("Contact not found");
     res.send(contact);
 });
 
