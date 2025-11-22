@@ -6,36 +6,43 @@ const cors = require("cors");
 const app = express();
 
 // env
-const API_SECRET = process.env.API_SECRET || 'default-secret';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'default-admin-password';
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/contactsDB";
 const PORT = process.env.PORT || 5000;
 // ---
 
 app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'x-api-secret']
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
 
 app.use(bodyParser.json());
 
-const validateApiKey = (req, res, next) => {
-    const clientSecret = req.headers['x-api-secret'] || req.headers['authorization'];
+// --- MIDDLEWARE ---
+
+const authenticateAdmin = (req, res, next) => {
+    if (req.method === 'GET' || req.method === 'POST') {
+        return next();
+    }
+
+    const authHeader = req.headers['authorization'];
     
-    if (!clientSecret) {
-        return res.status(401).send({ error: 'API secret required' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).send({ error: 'Admin password required via Authorization header' });
     }
     
-    const secret = clientSecret.replace('Bearer ', '');
-    
-    if (secret !== API_SECRET) {
-        return res.status(403).send({ error: 'Invalid API secret' });
+    const clientPassword = authHeader.split(' ')[1];
+
+    if (clientPassword !== ADMIN_PASSWORD) {
+        return res.status(403).send({ error: 'Invalid admin password' });
     }
     
     next();
 };
 
-app.use('/api/contacts', validateApiKey);
+app.use('/api/contacts', authenticateAdmin);
+
+// --- MONGODB CONFIGURATION ---
 
 mongoose
     .connect(MONGODB_URI)
@@ -49,6 +56,8 @@ const Contact = mongoose.model(
         phone: { type: String, required: true },
     })
 );
+
+// --- ROUTES API CONTACTS ---
 
 app.get("/api/contacts", async (req, res) => {
     const contacts = await Contact.find();
