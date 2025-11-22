@@ -2,14 +2,28 @@ const express = require("express");
 const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const bcrypt = require('bcryptjs');
 
 const app = express();
 
+// --- SECURITY & ENV CONFIGURATION ---
+
+// Default password
+const FALLBACK_PASSWORD_PLAINTEXT = 'default-admin-password';
+const FALLBACK_HASH = "$2a$12$9OQxYg6GtHMa4KixulWDPuhSnivVmESztr68TmEcutFQvuaoeleta";
+// ---
+
 // env
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'default-admin-password';
+let ADMIN_PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH;
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/contactsDB";
 const PORT = process.env.PORT || 5000;
 // ---
+
+if (!ADMIN_PASSWORD_HASH || ADMIN_PASSWORD_HASH.length < 50) {
+    console.warn("WARNING: The ADMIN_PASSWORD_HASH environment variable is missing or invalid.");
+    ADMIN_PASSWORD_HASH = FALLBACK_HASH;
+    console.warn(`Using DEFAULT HASH. Password: '${FALLBACK_PASSWORD_PLAINTEXT}'`);
+}
 
 app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
@@ -20,7 +34,7 @@ app.use(bodyParser.json());
 
 // --- MIDDLEWARE ---
 
-const authenticateAdmin = (req, res, next) => {
+const authenticateAdmin = async (req, res, next) => {
     if (req.method === 'GET' || req.method === 'POST') {
         return next();
     }
@@ -33,7 +47,16 @@ const authenticateAdmin = (req, res, next) => {
     
     const clientPassword = authHeader.split(' ')[1];
 
-    if (clientPassword !== ADMIN_PASSWORD) {
+    let isMatch = false;
+
+    try {
+        isMatch = await bcrypt.compare(clientPassword, ADMIN_PASSWORD_HASH);
+    } catch (error) {
+        console.error("Bcrypt compare error (Broken Hash?):", error);
+        return res.status(500).send({ error: 'Internal server error during authentication.' });
+    }
+
+    if (!isMatch) {
         return res.status(403).send({ error: 'Invalid admin password' });
     }
     
